@@ -10,7 +10,6 @@ import LogParser from 'log-parser';
 import Rcon from 'rcon/squad';
 
 import { SQUADJS_VERSION } from './utils/constants.js';
-import { SquadLayers } from './utils/squad-layers.js';
 
 import fetchAdminLists from './utils/admin-lists.js';
 
@@ -30,8 +29,6 @@ export default class SquadServer extends EventEmitter {
     this.players = [];
 
     this.plugins = [];
-
-    this.squadLayers = new SquadLayers(options.squadLayersSource);
 
     this.setupRCON();
     this.setupLogParser();
@@ -60,7 +57,6 @@ export default class SquadServer extends EventEmitter {
       1,
       `Beginning to watch ${this.options.host}:${this.options.queryPort}...`
     );
-    await this.squadLayers.pull();
 
     await this.rcon.connect();
     await this.logParser.watch();
@@ -140,10 +136,7 @@ export default class SquadServer extends EventEmitter {
     });
 
     this.logParser.on('NEW_GAME', (data) => {
-      if (data.layer) data.layer = this.squadLayers.getLayerByLayerName(data.layer);
-      else data.layer = this.squadLayers.getLayerByLayerClassname(data.layerClassname);
-
-      this.layerHistory.unshift({ ...data.layer, time: data.time });
+      this.layerHistory.unshift({ layer: data.layer, time: data.time });
       this.layerHistory = this.layerHistory.slice(0, this.layerHistoryMaxLength);
 
       this.emit('NEW_GAME', data);
@@ -310,16 +303,15 @@ export default class SquadServer extends EventEmitter {
     Logger.verbose('SquadServer', 1, `Updating layer information...`);
 
     try {
-      const layerInfo = await this.rcon.getLayerInfo();
+      const currentMap = await this.rcon.getCurrentMap();
+      const nextMap = await this.rcon.getNextMap();
 
       if (this.layerHistory.length === 0) {
-        const layer = this.squadLayers.getLayerByLayerName(layerInfo.currentLayer);
-
-        this.layerHistory.unshift({ ...layer, time: Date.now() });
+        this.layerHistory.unshift({ layer: currentMap.layer, time: Date.now() });
         this.layerHistory = this.layerHistory.slice(0, this.layerHistoryMaxLength);
       }
 
-      this.nextLayer = layerInfo.nextLayer;
+      this.nextLayer = nextMap.layer;
 
       this.emit('UPDATED_LAYER_INFORMATION');
     } catch (err) {

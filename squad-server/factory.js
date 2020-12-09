@@ -33,9 +33,6 @@ export default class SquadServerFactory {
     Logger.verbose('SquadServerFactory', 1, 'Creating SquadServer...');
     const server = new SquadServer(config.server);
 
-    // pull layers read to use to create layer filter connectors
-    await server.squadLayers.pull();
-
     // initialise connectors
     Logger.verbose('SquadServerFactory', 1, 'Preparing connectors...');
     const connectors = {};
@@ -100,13 +97,6 @@ export default class SquadServerFactory {
   static async createConnector(server, type, connectorName, connectorConfig) {
     Logger.verbose('SquadServerFactory', 1, `Starting ${type} connector ${connectorName}...`);
 
-    if (type === 'squadlayerpool') {
-      return server.squadLayers[connectorConfig.type](
-        connectorConfig.filter,
-        connectorConfig.activeLayerFilter
-      );
-    }
-
     if (type === 'discord') {
       const connector = new Discord.Client();
       await connector.login(connectorConfig);
@@ -116,14 +106,19 @@ export default class SquadServerFactory {
     if (type === 'sequelize') {
       let connector;
 
-      if(typeof connectorConfig === 'string') {
-        connector = new Sequelize(connectorConfig, { logging: msg => Logger.verbose('Sequelize', 3, msg) })
+      if (typeof connectorConfig === 'string') {
+        connector = new Sequelize(connectorConfig, {
+          logging: (msg) => Logger.verbose('Sequelize', 3, msg)
+        });
       } else if (typeof connectorConfig === 'object') {
-        connector = new Sequelize({ ...connectorConfig, logging: msg => Logger.verbose('Sequelize', 3, msg) });
+        connector = new Sequelize({
+          ...connectorConfig,
+          logging: (msg) => Logger.verbose('Sequelize', 3, msg)
+        });
       } else {
         throw new Error('Unknown sequelize connector config type.');
       }
-      
+
       await connector.authenticate();
       return connector;
     }
