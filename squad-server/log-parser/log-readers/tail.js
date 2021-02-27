@@ -7,7 +7,7 @@ export default class TailLogReader {
       throw new Error('queueLine argument must be specified and be a function.');
     if (!options.logDir) throw new Error('Log directory must be specified.');
 
-    this.reader = new TailModule.Tail(path.join(options.logDir, 'SquadGame.log'), {
+    this.reader = new TailModule.Tail(path.join(options.logDir, 'PostScriptum.log'), {
       useWatchFile: true
     });
 
